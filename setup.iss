@@ -1,11 +1,16 @@
 ; Inno Setup script for Claude Usage Widget. Built by build.py.
-#define AppVer "1.0.0"
+#ifndef AppVer
+  #define AppVer "0.0.0"
+#endif
 
 [Setup]
 AppId={{6F3B2C1E-9A4D-4E7B-8C21-5D0A7B9E4F13}
 AppName=Claude Usage Widget (unofficial)
 AppVersion={#AppVer}
-AppPublisher=Claude Usage Widget
+AppPublisher=Claude Usage Widget (open source)
+AppPublisherURL=https://github.com/lowjinghong29/claude-usage-widget
+AppSupportURL=https://github.com/lowjinghong29/claude-usage-widget/issues
+VersionInfoDescription=Claude Usage Widget (unofficial) installer
 AppComments=Unofficial tool. Not made or endorsed by Anthropic.
 DefaultDirName={localappdata}\Programs\Claude Usage Widget
 DefaultGroupName=Claude Usage Widget

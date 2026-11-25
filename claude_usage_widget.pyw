@@ -11,8 +11,10 @@ import json, shutil, subprocess, sys, threading, time, urllib.request, urllib.er
 from datetime import datetime, timezone
 from pathlib import Path
 
+VERSION = "1.0.1"
 CREDS = Path.home() / ".claude" / ".credentials.json"
 CLAUDE_JSON = Path.home() / ".claude.json"  # Claude Code's config; oauthAccount = who is logged in
+CENTER_PNG = Path.home() / ".claude-usage-widget" / "center.png"  # optional: your own picture inside the ring
 URL = "https://api.anthropic.com/api/oauth/usage"
 REFRESH_MS = 5 * 60 * 1000
 MIN_GAP = 30  # seconds between non-forced fetches; the usage endpoint rate-limits (HTTP 429)
@@ -23,8 +25,8 @@ KEY = "#010101"  # window color Windows treats as transparent
 BAR_W, BTN = 190, 40
 
 
-def ring_icon(n, pct, ring_color, label, transparent=False):
-    """n x n usage ring with a label in the middle. Ring drawn 4x then downsampled for smooth edges."""
+def ring_icon(n, pct, ring_color, label, transparent=False, center=None):
+    """n x n usage ring with a label (or the `center` picture) in the middle. Ring drawn 4x, downsampled."""
     from PIL import Image, ImageDraw, ImageFont
     k = 4
     big = Image.new("RGBA" if transparent else "RGB", (n * k, n * k), (0, 0, 0, 0) if transparent else KEY)
@@ -37,6 +39,15 @@ def ring_icon(n, pct, ring_color, label, transparent=False):
     elif pct > 0:
         d.arc(box, 270, 270 + 3.6 * pct, fill=ring_color, width=w)  # clockwise from 12 o'clock
     img = big.resize((n, n), Image.BOX)  # BOX keeps the see-through KEY area exact
+    if center is not None:
+        c = center.convert("RGBA")
+        if c.width <= 64:  # pixel art: whole-pixel scaling keeps it sharp
+            f = max(1, round(n * 0.65 / c.width))
+            c = c.resize((c.width * f, c.height * f), Image.NEAREST)
+        else:
+            c.thumbnail((round(n * 0.6), round(n * 0.6)), Image.LANCZOS)
+        img.paste(c, ((n - c.width) // 2, (n - c.height) // 2), c)
+        return img
     size = round(n * (0.34 if len(label) <= 2 else 0.27))
     try:
         font = ImageFont.truetype("seguisb.ttf", size)  # Segoe UI Semibold, ships with Windows
@@ -152,8 +163,14 @@ def main():
 
     from PIL import ImageTk
 
+    try:
+        from PIL import Image
+        center = Image.open(CENTER_PNG) if CENTER_PNG.exists() else None
+    except Exception:  # unreadable picture: just show the number
+        center = None
+
     def button_image(pct, ring_color, label):
-        return ImageTk.PhotoImage(ring_icon(B, pct, ring_color, label))
+        return ImageTk.PhotoImage(ring_icon(B, pct, ring_color, label, center=center))
 
     # --- the Claude button: round disc, rest of the window see-through ---
     try:
